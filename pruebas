@@ -5,8 +5,12 @@ import igraph
 from igraph import Graph, EdgeSeq
 import plotly.graph_objects as go
 
-expandidos = []
 mov = 0.5 # tamanio de paso del robot
+expandidos = []
+
+origen = [5,0]
+meta = [8,8]
+
 
 def get_nodos(raiz):
     nodos = []
@@ -18,7 +22,6 @@ def get_nodos(raiz):
         if (nodo in visitados) or (nodo in nodos):
             continue
         nodos.append(nodo)
-
         por_visitar += nodo.hijos
         visitados.append(nodo)
 
@@ -50,7 +53,8 @@ def crear_grafo(nodos, etiquetas):
     
     return g, edges
     
-def dibujar_grafo(grafo, labels):
+    
+def dibujar_grafo(grafo, labels, title):
     # Encontrar raíz: nodo sin padres (grado de entrada 0)
     raices = [v.index for v in grafo.vs if grafo.degree(v, mode="in") == 0]
     if len(raices) != 1:
@@ -84,14 +88,15 @@ def dibujar_grafo(grafo, labels):
     )
 
     fig = go.Figure(data=[trace_edges, trace_nodes],
-                    layout=go.Layout(title="Arbol 8 puzzle",
+                    layout=go.Layout(title=title,
                                      showlegend=True,
                                      margin=dict(b=20, l=5, r=5, t=40),
                                      xaxis=dict(showgrid=False, zeroline=False),
                                      yaxis=dict(showgrid=False, zeroline=False)))
     fig.show()
 
-def dibujar_grafo_anim(grafo, labels):
+
+def dibujar_grafo_anim(grafo, labels, title):
     raices = [v.index for v in grafo.vs if grafo.degree(v, mode="in") == 0]
     if len(raices) != 1:
         raise ValueError(f"Se esperaba 1 raíz, pero hay {len(raices)}")
@@ -137,14 +142,14 @@ def dibujar_grafo_anim(grafo, labels):
     fig = go.Figure(
         data=[initial_edges, initial_nodes],
         layout=go.Layout(
-            title="Árbol 8 Puzzle (Animado)",
+            title=title,
             showlegend=True,
             margin=dict(b=20, l=7, r=5, t=40),
             xaxis=dict(showgrid=False, zeroline=False),
             yaxis=dict(showgrid=False, zeroline=False),
             updatemenus=[dict(
                 type="buttons",
-                buttons=[dict(label="▶️ Reproducir",
+                buttons=[dict(label=" > Reproducir",
                               method="animate",
                               args=[None, {"frame": {"duration": 500, "redraw": True},
                                            "fromcurrent": True, "transition": {"duration": 0}}])],
@@ -157,10 +162,11 @@ def dibujar_grafo_anim(grafo, labels):
 
     fig.show()
 
+
 def dibujar(gp):
     plt.grid(True)
-    plt.scatter(gp[0], gp[1], c="c") # dibula la posicion de la meta
-    plt.plot([0,0,10, 10,0], [0,10,10,0,0]) # dibujamos un cuadro delimitando el espacio de trabajo
+    plt.scatter(gp[0], gp[1], c="r") # dibula la posicion del punto
+    plt.plot([0,0,10, 10,0], [0,10,10,0,0], c="k") # dibujamos un cuadro delimitando el espacio de trabajo
 
 class Obstaculo():
     def __init__(self, v1, v2):
@@ -175,7 +181,7 @@ class Obstaculo():
     def dibuja(self):
         x = [self.v1[0], self.v2[0], self.v2[0], self.v1[0], self.v1[0]]
         y = [self.v1[1], self.v1[1], self.v2[1], self.v2[1], self.v1[1]]
-        plt.plot(x,y)
+        plt.plot(x,y, "--k")
 
 def es_punto_valido(punto, obstaculos, limites):
     # esta en el limite permitido?
@@ -192,7 +198,6 @@ class Nodo():
         self.pos = pos
         self.hijos = []
         self.papa = papa
-        self.expandidos = []
 
     def genera_hijos(self, obstaculos, limites):
         global expandidos
@@ -213,27 +218,32 @@ class Nodo():
         pos_der = self.pos[:]
         pos_der[0] += mov
         
-        # diagonales
-
         if es_punto_valido(pos_arriba, obstaculos, limites):
             # self.hijos.append(Nodo(pos_arriba, self))
-            self.hijos.append(self.__class__(pos_arriba, self))
+            hijo = self.__class__(pos_arriba, self)
+            if hijo not in expandidos:
+                expandidos.append(hijo)
+            self.hijos.append(hijo)
 
         if es_punto_valido(pos_abajo, obstaculos, limites):
-            self.hijos.append(self.__class__(pos_abajo, self))
+            hijo = self.__class__(pos_abajo, self)
+            if hijo not in expandidos:
+                expandidos.append(hijo)
+            self.hijos.append(hijo)
         
         if es_punto_valido(pos_izq, obstaculos, limites):
-            self.hijos.append(self.__class__(pos_izq, self))
+            hijo = self.__class__(pos_izq, self)
+            if hijo not in expandidos:
+                expandidos.append(hijo)
+            self.hijos.append(hijo)
         
         if es_punto_valido(pos_der, obstaculos, limites):
-            self.hijos.append(self.__class__(pos_der, self))
+            hijo = self.__class__(pos_der, self)
+            if hijo not in expandidos:
+                expandidos.append(hijo)
+            self.hijos.append(hijo)
 
-        #expandidos += self.hijos[:]
-
-
-    def __eq__(self, n2, father = False):
-        if father:
-            return self.pos == n2.pos and self.papa.pos == n2.papa.pos
+    def __eq__(self, n2):
         return self.pos == n2.pos
 
     def __str__(self):
@@ -245,7 +255,7 @@ class Nodo():
         if self in visitados:
             return None
         
-        expandidos.append(self)
+        #expandidos.append(self)
 
         if self.pos == meta:
             return [self]
@@ -272,7 +282,7 @@ class Nodo():
         self.genera_hijos(robot.obstaculos, robot.limites)
         visitados.append(self)
 
-        expandidos.append(self)
+        #expandidos.append(self)
 
         por_visitar = self.hijos[:]
 
@@ -282,7 +292,7 @@ class Nodo():
             if h in visitados:
                 continue
 
-            expandidos.append(h)
+            #expandidos.append(h)
             
             if h.pos == meta:
                 camino = [h]
@@ -300,7 +310,7 @@ class Nodo():
             por_visitar += h.hijos
         
         return None
-
+    
 class Robot():
     def __init__(self, pos = [5,5], limites = [0,0,10,10], obstaculos = []):
         self.pos = pos
@@ -313,11 +323,13 @@ class Robot():
         self.obstaculos.append(obs)
 
     def plot_robot(self):
-        plt.scatter(self.pos[0], self.pos[1])
+        plt.scatter(self.pos[0], self.pos[1], c="b")
 
     def BPP(self, meta, visitados = []):
         self.raiz = Nodo(self.pos)
+        expandidos.append(self.raiz)
         camino = self.raiz.bpp(meta, self)
+        camino.reverse()
         self.trajectory = []
         for paso in camino:
             self.trajectory += paso.pos
@@ -325,12 +337,15 @@ class Robot():
 
     def BPA(self, meta, visitados = []):
         self.raiz = Nodo(self.pos)
+        expandidos.append(self.raiz)
         camino = self.raiz.bpa(meta, self)
         self.trajectory = []
 
         for paso in camino:
             self.trajectory += paso.pos
         return camino
+    
+
 
 class NodoHeuristica(Nodo):
     def __init__(self, pos, papa = None):
@@ -359,7 +374,7 @@ class NodoHeuristica(Nodo):
             if h in visitados:
                 continue
 
-            expandidos.append(h)
+            #expandidos.append(h)
 
             if h.pos == meta:
                 print("metaaaaaaa")
@@ -391,7 +406,7 @@ class NodoHeuristica(Nodo):
             if h in visitados:
                 continue
             
-            expandidos.append(h)
+            #expandidos.append(h)
 
             if h.pos == meta:
                 print("metaaaaaaa")
@@ -423,8 +438,8 @@ class RobotHeur(Robot, Nodo):
         self.raiz = NodoHeuristica(self.pos)
 
     def BGREEDY(self, meta):
-        #raiz = NodoHeuristica(self.pos)
-
+        self.raiz = NodoHeuristica(self.pos)
+        expandidos.append(self.raiz)
         camino = self.raiz.bgreedy(meta, self)
         if camino:
             self.trajectory = []
@@ -435,8 +450,9 @@ class RobotHeur(Robot, Nodo):
         return camino
 
     def ASTAR(self, meta):
-        raiz = NodoHeuristica(self.pos)
-        camino = raiz.astar(meta, self)
+        self.raiz = NodoHeuristica(self.pos)
+        expandidos.append(self.raiz)
+        camino = self.raiz.astar(meta, self)
         if camino:
             self.trajectory = []
             for paso in camino:
@@ -444,89 +460,145 @@ class RobotHeur(Robot, Nodo):
         else:
             print("Camino no encontrado")
         return camino
+    
+def plot_space(robot, expandidos, title):
+    # Creamos la figura y los ejes
+    fig, ax = plt.subplots()
 
-expandidos = []
-wall_E_BPP = Robot([5,0])
-wall_E_BPP.agrega_obstaculo(Obstaculo([6,6],[10,2]))
-wall_E_BPP.agrega_obstaculo(Obstaculo([5,9],[7,7]))
-wall_E_BPP.agrega_obstaculo(Obstaculo([4,6],[5,4]))
+    x_points = robot.trajectory[0::2]
+    y_points = robot.trajectory[1::2]
+    ax.set_xlim(-1, 11)
+    ax.set_ylim(-1, 11)
 
+    for obstaculo in robot.obstaculos:
+        obstaculo.dibuja()
+    
 
-
-
-
-camino = wall_E_BPP.BPP(meta=[8,8])
-#plt.plot(wall_E_BPP.trajectory[0::2], wall_E_BPP.trajectory[1::2])
-""" for p in expandidos:
-    plt.scatter(p.pos[0], p.pos[1], c="k") """
-x_points = wall_E_BPP.trajectory[0::2]
-y_points = wall_E_BPP.trajectory[1::2]
-
-x_points.reverse()
-y_points.reverse()
-
-print(f" expandidos {len(expandidos)}")
-print(f"x: {x_points}")
-print(f"y: {y_points}")
+    # Línea inicial vacía
+    line, = ax.plot([], [], "o-b")
+    exp = ax.scatter([], [])
+    
 
 
+    # Función de inicialización
+    def init():
+        line.set_data([], [])
+        exp.set_offsets(np.empty((0, 2)))
+        dibujar(meta)
+        robot.plot_robot()
+        return line,
+
+    def update(frame):
+
+        x_data = x_points[:frame]
+        y_data = y_points[:frame]
+        line.set_data(x_data, y_data)
+
+        x_exp = []
+        y_exp = []
+
+        porcentaje = frame / len(x_points)
+        num_expandidos = int(len(expandidos) * porcentaje)
+
+        for nodo in expandidos[:num_expandidos]:
+            x_exp.append(nodo.pos[0])
+            y_exp.append(nodo.pos[1])
+        exp.set_color("y")
+        exp.set_offsets(np.c_[x_exp, y_exp])
+        
+        return line, exp
+
+    # Creamos la animación
+    ani = FuncAnimation(
+        fig, update, frames=len(x_points),
+        init_func=init, blit=True, interval=100
+    )
+
+    plt.title(title)
+    plt.grid(visible=True)
+    # Mostramos la animación
+    plt.show()
+
+def ejecutar_BPP(origen, meta):
+    global expandidos
+    expandidos = []
+
+    wall_E_BPP = Robot(origen)
+    wall_E_BPP.agrega_obstaculo(Obstaculo([6,6],[10,2]))
+    wall_E_BPP.agrega_obstaculo(Obstaculo([5,9],[7,7]))
+    wall_E_BPP.agrega_obstaculo(Obstaculo([4,6],[5,4]))
+
+    camino = wall_E_BPP.BPP(meta=meta)
+    plot_space(wall_E_BPP, expandidos, "Camino del robot con BPP")
+    print(f"Expandidos {len(expandidos)}")
+
+    nodos = get_nodos(wall_E_BPP.raiz)
+    etiquetas = get_etiquetas(nodos)
+    grafo, uniones = crear_grafo(nodos, etiquetas)
+    print(f"Expandidos {len(nodos)}")
+
+    dibujar_grafo_anim(grafo, etiquetas, "Arbol BPP")
+
+def ejecutar_BPA(origen, meta):
+    global expandidos
+    expandidos = []
+
+    wall_E_BPA = Robot(origen)
+    wall_E_BPA.agrega_obstaculo(Obstaculo([6,6],[10,2]))
+    wall_E_BPA.agrega_obstaculo(Obstaculo([5,9],[7,7]))
+    wall_E_BPA.agrega_obstaculo(Obstaculo([4,6],[5,4]))
+
+    camino = wall_E_BPA.BPA(meta=meta)
+    plot_space(wall_E_BPA, expandidos, "Camino del robot con BPA")
+    print(f"Expandidos {len(expandidos)}")
+
+    nodos = get_nodos(wall_E_BPA.raiz)
+    etiquetas = get_etiquetas(nodos)
+    grafo, uniones = crear_grafo(nodos, etiquetas)
+    print(f"Expandidos {len(nodos)}")
+
+    dibujar_grafo_anim(grafo, etiquetas, "Arbol BPA")
+
+def ejecutar_GREEDY(origen, meta):
+    global expandidos
+    expandidos = []
+
+    wall_E_GREEDY = RobotHeur(origen)
+    wall_E_GREEDY.agrega_obstaculo(Obstaculo([6,6],[10,2]))
+    wall_E_GREEDY.agrega_obstaculo(Obstaculo([5,9],[7,7]))
+    wall_E_GREEDY.agrega_obstaculo(Obstaculo([4,6],[5,4]))
+
+    camino = wall_E_GREEDY.BGREEDY(meta=meta)
+    plot_space(wall_E_GREEDY, expandidos, "Camino del robot con GREEDY")
+    print(f"Expandidos {len(expandidos)}")
+
+    nodos = get_nodos(wall_E_GREEDY.raiz)
+    etiquetas = get_etiquetas(nodos)
+    grafo, uniones = crear_grafo(nodos, etiquetas)
+    print(f"Expandidos {len(nodos)}")
+
+    dibujar_grafo_anim(grafo, etiquetas, "Arbol GREEDY")
+
+def ejecutar_ASTAR(origen, meta):
+    global expandidos
+    expandidos = []
+
+    wall_E_ASTAR = RobotHeur(origen)
+    wall_E_ASTAR.agrega_obstaculo(Obstaculo([6,6],[10,2]))
+    wall_E_ASTAR.agrega_obstaculo(Obstaculo([5,9],[7,7]))
+    wall_E_ASTAR.agrega_obstaculo(Obstaculo([4,6],[5,4]))
+
+    camino = wall_E_ASTAR.ASTAR(meta=meta)
+    plot_space(wall_E_ASTAR, expandidos, "Camino del robot con A*")
+    print(f"Expandidos {len(expandidos)}")
+
+    nodos = get_nodos(wall_E_ASTAR.raiz)
+    etiquetas = get_etiquetas(nodos)
+    grafo, uniones = crear_grafo(nodos, etiquetas)
+    print(f"Expandidos {len(nodos)}")
+
+    dibujar_grafo_anim(grafo, etiquetas, "Arbol A*")
 
 
-""" # Creamos la figura y los ejes
-fig, ax = plt.subplots()
 
-# Definimos el rango para la variable independiente x
-x = np.linspace(0, 100, 100)
-
-
-# Creamos la línea inicial con una onda sinusoidal
-line, = ax.plot(x_points, y_points)
-
-# Función de actualización para cada frame de la animación
-def update(frame):
-    global x
-    # Creamos una nueva posición para la onda a medida que avanza el tiempo
-    newx = [x_points[x], y_points[x]]
-    x+=1
-    # Actualizamos los datos de la línea con la nueva posición
-    line.set_data(newx[0:], newx[1:])
-    return line,
-
-# Creamos la animación
-ani = FuncAnimation(fig, update, frames=100, blit=True)
-
-# Mostramos la animación
-plt.show() """
-
-# Asume que ya tienes x_points, y_points definidos y son del mismo tamaño
-fig, ax = plt.subplots()
-ax.set_xlim(min(x_points) - 1, max(x_points) + 1)
-ax.set_ylim(min(y_points) - 1, max(y_points) + 1)
-
-# Línea inicial vacía
-line, = ax.plot([], [], 'b-', lw=2)
-
-for obstaculo in wall_E_BPP.obstaculos:
-    obstaculo.dibuja()
-wall_E_BPP.plot_robot()
-dibujar([8,8])
-
-# Función de inicialización
-def init():
-    line.set_data([], [])
-    return line,
-
-# Función de actualización para la animación
-def update(frame):
-    line.set_data(x_points[:frame], y_points[:frame])
-    return line,
-
-# Creamos la animación
-ani = FuncAnimation(
-    fig, update, frames=len(x_points),
-    init_func=init, blit=True, interval=100
-)
-
-plt.title("Camino del robot con BPP")
-plt.grid()
-plt.show()
+ejecutar_ASTAR(origen, meta)
