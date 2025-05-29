@@ -73,14 +73,14 @@ def dibujar_grafo(grafo, labels, title):
 
     trace_edges = go.Scatter(
         x=Xe, y=Ye,
-        mode='lines',
-        line=dict(width=1, color='gray'),
-        hoverinfo='none'
+        mode="lines",
+        line=dict(width=1, color="gray"),
+        hoverinfo="none"
     )
 
     trace_nodes = go.Scatter(
         x=Xn, y=Yn,
-        mode='markers',
+        mode="markers",
         marker=dict(symbol="circle-dot", size=30, color="lightblue", line=dict(width=2)),
         text=labels,
         textposition="middle center",
@@ -119,14 +119,14 @@ def dibujar_grafo_anim(grafo, labels, title):
 
         trace_edges = go.Scatter(
             x=Xe, y=Ye,
-            mode='lines',
-            line=dict(width=1, color='gray'),
-            hoverinfo='none'
+            mode="lines",
+            line=dict(width=1, color="gray"),
+            hoverinfo="none"
         )
 
         trace_nodes = go.Scatter(
             x=Xn[:i], y=Yn[:i],
-            mode='markers',
+            mode="markers",
             marker=dict(symbol="circle-dot", size=30, color="lightblue", line=dict(width=2)),
             text=labels[:i],
             textposition="middle center",
@@ -136,8 +136,8 @@ def dibujar_grafo_anim(grafo, labels, title):
         frames.append(go.Frame(data=[trace_edges, trace_nodes], name=str(i)))
 
     # Frame inicial
-    initial_edges = go.Scatter(x=[], y=[], mode='lines')
-    initial_nodes = go.Scatter(x=[], y=[], mode='markers')
+    initial_edges = go.Scatter(x=[], y=[], mode="lines")
+    initial_nodes = go.Scatter(x=[], y=[], mode="markers")
 
     fig = go.Figure(
         data=[initial_edges, initial_nodes],
